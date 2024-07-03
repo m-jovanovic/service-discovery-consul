@@ -1,0 +1,62 @@
+version: '3.4'
+
+services:
+  api:
+    image: ${DOCKER_REGISTRY-}newsletter-api
+    container_name: Newsletter.Api
+    build:
+      context: .
+      dockerfile: Newsletter.Api/Dockerfile
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+
+  reporting-api:
+    image: ${DOCKER_REGISTRY-}newsletter-reporting-api
+    container_name: Newsletter.Reporting.Api
+    build:
+      context: .
+      dockerfile: Newsletter.Reporting.Api/Dockerfile
+    ports:
+      - "6000:8080"
+      - "6001:8081"
+    environment:
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: Newsletter.SqlServer
+    volumes:
+      - ./.containers/database:/var/opt/mssql/data
+    ports:
+      - "1433:1433"
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Strong_password_123!"
+
+  rabbitmq:
+    image: rabbitmq:management
+    container_name: Newsletter.RabbitMq
+    hostname: rabbitmq
+    volumes:
+      - ./.containers/queue/data/:/var/lib/rabbitmq
+      - ./.containers/queue/log/:/var/log/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: Newsletter.Jaeger
+    ports:
+      - 4317:4317
+      - 4318:4318
+      - 16686:16686
+
+  consul:
+    image: hashicorp/consul:latest
+    container_name: Newsletter.Consul
+    ports:
+      - 8500:8500
